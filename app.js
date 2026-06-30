@@ -80,9 +80,19 @@ const chartOptions = {
     stroke: { curve: 'smooth', width: 2 },
     xaxis: {
         type: 'datetime',
-        labels: { style: { colors: '#94a3b8' } },
+        labels: {
+            style: { colors: '#94a3b8' },
+            format: 'yyyy' // Just show the year on the bottom axis
+        },
         axisBorder: { show: false },
-        axisTicks: { show: false }
+        axisTicks: { show: false },
+        tickAmount: 8 // Force it to space out nicely by year
+    },
+    tooltip: {
+        theme: 'dark',
+        x: {
+            format: 'MMMM yyyy' // When hovering, show "August 2022"
+        }
     },
     yaxis: {
         min: 0,
