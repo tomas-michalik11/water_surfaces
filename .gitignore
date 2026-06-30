@@ -9,15 +9,18 @@ data/checkpoint.csv
 
 # Ignore all GIS test files and shapefiles
 *.gdb/
-*.geojson
 *.shp
 *.shx
 *.dbf
 *.prj
+*.geojson
 
 # Ignore ALL parquet files...
 *.parquet
-# ...EXCEPT the base vector template we need for the pipeline!
+
+# ...EXCEPT the specific files our GitHub Pages frontend needs!
 !data/eu_water_surfaces.parquet
+!data/water_trends_history.parquet
+!data/eu_water_surfaces.geojson
 
 todo.md

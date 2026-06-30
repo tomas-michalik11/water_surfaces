@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AquaStress | EU Water Monitor</title>
+
+    <!-- Modern Premium Font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+
+    <!-- MapLibre GL JS (For the vector map) -->
+    <script src="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.js"></script>
+    <link href="https://unpkg.com/maplibre-gl@3.6.2/dist/maplibre-gl.css" rel="stylesheet" />
+
+    <!-- ApexCharts (For the time-series graph) -->
+    <script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+
+    <!-- Our Custom Styles -->
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+    <!-- Full-screen map container -->
+    <div id="map"></div>
+
+    <!-- Wide Horizontal Bottom Panel -->
+    <div id="bottom-panel">
+
+        <!-- Left Side: Title and Stats -->
+        <div id="stats-container">
+            <div>
+                <h1>AquaStress</h1>
+                <p class="subtitle">European Reservoir Monitor</p>
+            </div>
+
+            <div class="stats-card">
+                <h2 id="lake-name">Select a reservoir</h2>
+                <div id="current-capacity">--%</div>
+                <p id="capacity-label">Current Capacity</p>
+            </div>
+        </div>
+
+        <!-- Right Side: The Chart -->
+        <div id="chart-container"></div>
+
+    </div>
+
+    <!-- Our application logic -->
+    <script type="module" src="app.js"></script>
+</body>
+
+
+
+</html>
