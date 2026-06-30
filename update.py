@@ -8,24 +8,19 @@ import concurrent.futures
 from backfill import process_month
 
 def get_next_processing_month():
-    print("🌍 Connecting to Cloudflare R2 to read historical data...")
+    print("🌍 Reading historical data locally...")
     
-    # We will pass the bucket name as an environment variable in GitHub Actions
-    bucket_name = os.environ.get("R2_BUCKET_NAME", "your-bucket-name-here")
-    file_path = f"s3://{bucket_name}/water_trends_history.parquet"
+    file_path = "data/water_trends_history.parquet"
     
-    # pandas uses s3fs under the hood. It automatically looks for standard
-    # S3 credentials in your environment variables: 
-    # AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, and AWS_ENDPOINT_URL_S3
     try:
         df_history = pd.read_parquet(file_path)
     except Exception as e:
-        print(f"❌ Failed to load from R2: {e}")
+        print(f"❌ Failed to load local history: {e}")
         return None, None
         
     # Find the most recent date in your dataset
     max_date = pd.to_datetime(df_history['date']).max()
-    print(f"📊 Latest data in R2 is from: {max_date.date()}")
+    print(f"📊 Latest data is from: {max_date.date()}")
     
     # Calculate the target month using pandas offsets
     target_month = max_date + pd.offsets.MonthBegin(1)
@@ -92,11 +87,10 @@ def main():
     # Critical: Keep the primary and secondary sort keys intact
     df_combined = df_combined.sort_values(by=['hylak_id', 'date']).reset_index(drop=True)
     
-    print("☁️ Uploading updated dataset back to Cloudflare R2...")
-    bucket_name = os.environ.get("R2_BUCKET_NAME", "your-bucket-name-here")
-    df_combined.to_parquet(f"s3://{bucket_name}/water_trends_history.parquet")
-    print("🎉 Incremental update complete!")
+    print("☁️ Saving updated dataset locally...")
+    file_path = "data/water_trends_history.parquet"
+    df_combined.to_parquet(file_path)
+    print(f"🎉 Incremental update complete! Saved to {file_path}")
 
 if __name__ == "__main__":
     main()
-
