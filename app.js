@@ -82,18 +82,16 @@ const chartOptions = {
         type: 'datetime',
         labels: {
             style: { colors: '#94a3b8' },
-            format: 'yyyy' // Just show the year on the bottom axis
+            datetimeFormatter: {
+                year: 'yyyy',
+                month: 'MMM yyyy'
+            }
         },
         axisBorder: { show: false },
-        axisTicks: { show: false },
-        tickAmount: 8 // Force it to space out nicely by year
+        axisTicks: { show: false }
+        // We removed tickAmount so ApexCharts can auto-calculate it dynamically!
     },
-    tooltip: {
-        theme: 'dark',
-        x: {
-            format: 'MMMM yyyy' // When hovering, show "August 2022"
-        }
-    },
+
     yaxis: {
         min: 0,
         max: 100,
