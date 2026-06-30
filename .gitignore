@@ -1,0 +1,23 @@
+__pycache__/
+.ipynb_checkpoints/
+venv/
+env/
+.env
+
+# Ignore temporary backfill files
+data/checkpoint.csv
+
+# Ignore all GIS test files and shapefiles
+*.gdb/
+*.geojson
+*.shp
+*.shx
+*.dbf
+*.prj
+
+# Ignore ALL parquet files...
+*.parquet
+# ...EXCEPT the base vector template we need for the pipeline!
+!data/eu_water_surfaces.parquet
+
+todo.md

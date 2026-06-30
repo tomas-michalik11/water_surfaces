@@ -1,0 +1,8 @@
+geopandas
+pandas
+numpy
+pystac-client
+planetary-computer
+odc-stac
+rioxarray
+s3fs
