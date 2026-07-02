@@ -4,6 +4,7 @@
   <p>
     An end-to-end, serverless data pipeline and web application for monitoring water levels across European reservoirs using Sentinel-2 satellite imagery, DuckDB-Wasm, and MapLibre GL.
   </p>
+  <h3>🌍 <a href="https://tomas-michalik11.github.io/water_surfaces/">View the Live Demo on GitHub Pages</a></h3>
 </div>
 
 ---
@@ -130,9 +131,3 @@ Navigate to `http://localhost:8000` in your web browser.
 
 ---
 
-## 🔮 Future Roadmap
-
-- **🌍 Global Expansion**: Extend the pipeline logic from European reservoirs to a global dataset (e.g., HydroLAKES).
-- **☁️ Automated CI/CD**: Implement GitHub Actions to run `update.py` and `prepare_web_data.py` on a monthly cron schedule, automatically deploying the updated Parquet file.
-- **🗺️ PMTiles Integration**: Transition from GeoJSON to PMTiles for the vector geometries to dramatically reduce initial load time and memory usage for global datasets.
-- **🤖 Predictive Modeling**: Incorporate simple forecasting models or weather API integrations to predict future water stress levels based on current trajectories.
