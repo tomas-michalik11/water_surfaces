@@ -227,7 +227,48 @@ function addMapLayer(geojsonData) {
         }
     });
 
-    console.log("🎨 Lakes drawn on map!");
+    // --- HIGHLIGHT LAYERS ---
+    
+    // 1. Highlight Fill (Yellowish with low opacity)
+    map.addLayer({
+        id: 'lakes-highlight-fill',
+        type: 'fill',
+        source: 'lakes',
+        paint: {
+            'fill-color': '#fde047', // Vibrant yellow
+            'fill-opacity': 0.3
+        },
+        filter: ['==', ['get', 'Hylak_id'], -1] // Start hidden
+    });
+
+    // 2. Highlight Glow (Thick, blurred, highly transparent line)
+    map.addLayer({
+        id: 'lakes-highlight-glow',
+        type: 'line',
+        source: 'lakes',
+        paint: {
+            'line-color': '#fde047',
+            'line-width': 12,
+            'line-opacity': 0.4,
+            'line-blur': 8
+        },
+        filter: ['==', ['get', 'Hylak_id'], -1]
+    });
+
+    // 3. Highlight Sharp Border (Thin, bright solid line)
+    map.addLayer({
+        id: 'lakes-highlight-border',
+        type: 'line',
+        source: 'lakes',
+        paint: {
+            'line-color': '#fef08a', // Brighter yellow
+            'line-width': 2,
+            'line-opacity': 1
+        },
+        filter: ['==', ['get', 'Hylak_id'], -1]
+    });
+
+    console.log("🎨 Lakes and highlight layers drawn on map!");
 
 
     // --- Add Interactivity ---
@@ -247,6 +288,11 @@ function addMapLayer(geojsonData) {
         const lakeId = feature.properties.Hylak_id;
         const lakeName = feature.properties.name;
         const currentCap = feature.properties.water_percent;
+
+        // Apply the highlight filters so only the clicked lake lights up!
+        map.setFilter('lakes-highlight-fill', ['==', ['get', 'Hylak_id'], lakeId]);
+        map.setFilter('lakes-highlight-glow', ['==', ['get', 'Hylak_id'], lakeId]);
+        map.setFilter('lakes-highlight-border', ['==', ['get', 'Hylak_id'], lakeId]);
 
         // 1. Update the UI Text
         document.getElementById('lake-name').innerText = lakeName || "Unnamed Reservoir";
