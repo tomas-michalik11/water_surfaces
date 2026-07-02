@@ -33,9 +33,9 @@ def clean_and_prepare_for_web(input_parquet, output_parquet, window_size=3):
     DROP_THRESHOLD = 30.0 
     
     # 1. Get the previous and next month's values. 
-    # CRITICAL: We must use groupby('hylak_id') so we don't compare Lake A with Lake B!
-    prev_val = df_clean.groupby('hylak_id')['water_percent'].shift(1)
-    next_val = df_clean.groupby('hylak_id')['water_percent'].shift(-1)
+    # CRITICAL: We must use groupby(group_col) so we don't compare Lake A with Lake B!
+    prev_val = df_clean.groupby(group_col)['water_percent'].shift(1)
+    next_val = df_clean.groupby(group_col)['water_percent'].shift(-1)
     curr_val = df_clean['water_percent']
     
     # 2. Find the anomalies (Current is much lower than BOTH previous and next)
@@ -50,8 +50,8 @@ def clean_and_prepare_for_web(input_parquet, output_parquet, window_size=3):
     
     # 4. Interpolate! This draws a straight line between the previous and next month
     # so the data looks perfectly natural again.
-    df_clean['water_percent'] = df_clean.groupby('hylak_id')['water_percent'].transform(lambda x: x.interpolate())
-    df_clean['water_area_km2'] = df_clean.groupby('hylak_id')['water_area_km2'].transform(lambda x: x.interpolate())
+    df_clean['water_percent'] = df_clean.groupby(group_col)['water_percent'].transform(lambda x: x.interpolate())
+    df_clean['water_area_km2'] = df_clean.groupby(group_col)['water_area_km2'].transform(lambda x: x.interpolate())
     
     # 5. Calculate the Rolling Average
     # Using 'min_periods=1' ensures the first couple of dates don't become NaN 

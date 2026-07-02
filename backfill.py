@@ -33,8 +33,19 @@ def get_best_scene(catalog, bbox, start_date, end_date):
             if not items:
                 return None
                 
-            items.sort(key=lambda x: x.properties["eo:cloud_cover"])
-            return items[0]
+            # Group items by the exact day they were captured
+            items_by_date = {}
+            for item in items:
+                date_str = item.datetime.date().isoformat()
+                if date_str not in items_by_date:
+                    items_by_date[date_str] = []
+                items_by_date[date_str].append(item)
+                
+            # Find the date with the lowest AVERAGE cloud cover across all its tiles
+            best_date = min(items_by_date.keys(), key=lambda d: sum(i.properties["eo:cloud_cover"] for i in items_by_date[d]) / len(items_by_date[d]))
+            
+            # Return ALL items from that best day (a list!)
+            return items_by_date[best_date]
             
         except Exception as e:
             if attempt < max_retries - 1:
@@ -51,19 +62,21 @@ def get_best_scene(catalog, bbox, start_date, end_date):
     return None
 
 
-def process_scene(item, lake_row):
+def process_scene(items, lake_row):
     """Loads the bands, applies cloud mask, calculates MNDWI, clips to the lake, and returns the water area in km²."""
     bbox = lake_row.geometry.bounds
     
     print("  -> Starting odc.stac.load...")
     try:
         ds = odc.stac.load(
-            [item],
+            items,
             bands=["B03", "B11", "SCL"],
             bbox=bbox,
             crs="EPSG:3857",
-            resolution=10
+            resolution=10,
+            groupby="solar_day" #stitching images together
         ).isel(time=0)
+
         print("  -> odc.stac.load finished successfully!")
     except Exception as e:
         print(f"  [!] Failed to load data from STAC: {e}")
@@ -167,16 +180,16 @@ def process_month(year, month, lake, catalog):
     end_date_str = end_date.strftime("%Y-%m-%d")
     
     bbox = lake.geometry.bounds
-    best_scene = get_best_scene(catalog, bbox, start_date, end_date_str)
+    best_scenes = get_best_scene(catalog, bbox, start_date, end_date_str)
     
-    if best_scene:
-        water_area = process_scene(best_scene, lake)
+    if best_scenes:
+        water_area = process_scene(best_scenes, lake)
         if water_area is not None:
             return {
                 'hylak_id': lake['Hylak_id'],
                 'name': lake['Lake_name'],
                 'country': lake['Country'],
-                'date': pd.to_datetime(best_scene.datetime.date()),
+                'date': pd.to_datetime(best_scenes[0].datetime.date()),
                 'water_area_km2': water_area
             }
     # If no scene is found, or if process_scene fails, we still MUST return a row.
