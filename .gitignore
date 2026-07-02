@@ -21,6 +21,7 @@ data/checkpoint.csv
 # ...EXCEPT the specific files our GitHub Pages frontend needs!
 !data/eu_water_surfaces.parquet
 !data/water_trends_history.parquet
+!data/water_trends_history_web.parquet
 !data/eu_water_surfaces.geojson
 
 todo.md
