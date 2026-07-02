@@ -4,10 +4,18 @@ from pystac_client import Client
 import planetary_computer
 import odc.stac
 import rioxarray
+import rasterio.features
 import numpy as np
 import os
 import concurrent.futures
 import time
+import gc
+import random
+
+VALID_PIXEL_THRESHOLD = 0.70
+MIN_WATER_PERCENT_THRESHOLD = 10.0
+SCL_INVALID = [0, 3, 8, 9, 10, 11]  
+
 
 def get_best_scene(catalog, bbox, start_date, end_date):
     """Queries STAC and returns the single scene with the lowest cloud cover for the period."""
@@ -30,15 +38,17 @@ def get_best_scene(catalog, bbox, start_date, end_date):
             
         except Exception as e:
             if attempt < max_retries - 1:
-                sleep_time = 2 ** attempt  # Wait 1s, then 2s, then 4s...
-                print(f"    [!] API/Network error ({type(e).__name__}). Retrying in {sleep_time}s...")
+                # Add "Jitter" (a random fraction of a second) so threads don't wake up together
+                base_sleep = 2 ** attempt 
+                jitter = random.uniform(0.5, 2.5) 
+                sleep_time = base_sleep + jitter
+                
+                print(f"    [!] API/Network error. Retrying in {sleep_time:.1f}s...")
                 time.sleep(sleep_time)
             else:
                 print(f"    [!] Failed completely after {max_retries} attempts. Giving up on this month.")
                 return None
     return None
-
-
 
 
 def process_scene(item, lake_row):
@@ -59,36 +69,89 @@ def process_scene(item, lake_row):
         print(f"  [!] Failed to load data from STAC: {e}")
         return None
 
-    print("  -> Calculating MNDWI...")
-    b03 = ds.B03.astype(float)
-    b11 = ds.B11.astype(float)
-    scl = ds.SCL
+    print("  -> Projecting geometries for Dual-Zone evaluation...")
+    lake_gdf = gpd.GeoDataFrame([lake_row], crs="EPSG:4326", geometry='geometry')
     
-    valid_mask = ~scl.isin([3, 8, 9, 10])
-    mndwi = (b03 - b11) / (b03 + b11 + 1e-8)
-    mndwi_masked = mndwi.where(valid_mask)
-
-    print("  -> Projecting and clipping...")
-    lake_gdf = gpd.GeoDataFrame([lake_row], crs="EPSG:4326")
-    lake_projected = lake_gdf.to_crs(ds.rio.crs)
+    # 1. Project the ORIGINAL, unbuffered core geometry
+    lake_core_projected = lake_gdf.to_crs(ds.rio.crs)
+    expected_core_pixels = int(lake_core_projected.geometry.area.values[0] / 100)
     
-    mndwi_masked.rio.write_crs(ds.rio.crs, inplace=True)
+    # 2. Apply the 100m buffer to create the expanded boundary
+    lake_buffered_projected = lake_core_projected.copy()
+    lake_buffered_projected.geometry = lake_buffered_projected.geometry.buffer(100)
     
+    # Clip the ENTIRE dataset early using the BUFFERED geometry
+    ds.rio.write_crs(ds.rio.crs, inplace=True)
     try:
-        mndwi_clipped = mndwi_masked.rio.clip(lake_projected.geometry.values, lake_projected.crs)
-        print("  -> Clipping finished successfully!")
+        ds_clipped = ds.rio.clip(lake_buffered_projected.geometry.values, lake_buffered_projected.crs)
     except Exception as e:
-        print(f"  [!] Failed to clip geometry (might be out of bounds): {e}")
+        print(f"  [!] Failed to clip geometry: {e}")
+        ds.close()
         return None
 
-    print("  -> Calculating final area...")
-    water_clipped = mndwi_clipped > 0.0
-    total_water_pixels = int(water_clipped.sum().values)
+    # Generate a 2D boolean numpy mask for the original CORE area
+    # invert=True means pixels INSIDE the lake core are True, outside are False
+    core_mask = rasterio.features.geometry_mask(
+        geometries=lake_core_projected.geometry.values,
+        out_shape=(ds_clipped.rio.height, ds_clipped.rio.width),
+        transform=ds_clipped.rio.transform(),
+        all_touched=False,
+        invert=True
+    )
+    
+    # 3. Perform cloud validation strictly over the CORE lake body
+    scl_core = ds_clipped.SCL.where(core_mask)
+    core_total_pixels = int(scl_core.notnull().sum().values)
+    
+    if core_total_pixels == 0:
+        ds.close()
+        ds_clipped.close()
+        return np.nan
+        
+    core_invalid_pixels = int(scl_core.isin(SCL_INVALID).sum().values)
+    core_clear_pixels = core_total_pixels - core_invalid_pixels
+    
+    # Validate using YOUR Tile-Edge logic (expected_core_pixels)
+    valid_ratio = core_clear_pixels / expected_core_pixels
+    
+    if valid_ratio < VALID_PIXEL_THRESHOLD:
+        print(f"  [!] Scene rejected: Core cloud cover too high ({valid_ratio:.2f} < {VALID_PIXEL_THRESHOLD})")
+        ds.close()
+        ds_clipped.close()
+        return np.nan
+
+    print(f"  -> Scene passed! (Valid ratio: {valid_ratio:.2f}). Processing MNDWI over buffer...")
+    # 4. Process MNDWI over the ENTIRE BUFFER to catch expanded shorelines
+    b03 = ds_clipped.B03.astype('float32')
+    b11 = ds_clipped.B11.astype('float32')
+    mndwi = (b03 - b11) / (b03 + b11 + 1e-8)
+    
+    buffer_valid_mask = ~ds_clipped.SCL.isin(SCL_INVALID)
+    mndwi_masked = mndwi.where(buffer_valid_mask)
+    
+    # Detect water anywhere inside the expanded buffer zone
+    water_in_buffer = mndwi_masked > 0.0
+    visible_water_pixels_in_buffer = int(water_in_buffer.sum().values)
+    
+    # 5. Calculate fractional extrapolation using the CORE ratio
+    core_water_pixels = int((water_in_buffer.where(core_mask) == True).sum().values)
+    
+    core_water_ratio = (core_water_pixels / core_clear_pixels) if core_clear_pixels > 0 else 0
+    
+    # Find all missing pixels in the core (due to clouds OR tile edges!)
+    missing_core_pixels = expected_core_pixels - core_clear_pixels
+    
+    # Total = Every pixel of water we saw + our best guess for the missing core pixels
+    estimated_water_pixels = visible_water_pixels_in_buffer + (missing_core_pixels * core_water_ratio)
     
     pixel_size_m2 = 10 * 10
-    area_km2 = (total_water_pixels * pixel_size_m2) / 1_000_000
+    area_km2 = (estimated_water_pixels * pixel_size_m2) / 1_000_000
     
+    ds.close()
+    ds_clipped.close()
     return area_km2
+
+
 
 
 def process_month(year, month, lake, catalog):
@@ -110,8 +173,15 @@ def process_month(year, month, lake, catalog):
                 'date': pd.to_datetime(best_scene.datetime.date()),
                 'water_area_km2': water_area
             }
-    return None
-
+    # If no scene is found, or if process_scene fails, we still MUST return a row.
+    # We use the 15th of the month as a safe placeholder date for the time series.
+    return {
+        'hylak_id': lake['Hylak_id'],
+        'name': lake['Lake_name'],
+        'country': lake['Country'],
+        'date': pd.Timestamp(year, month, 15),
+        'water_area_km2': np.nan
+    }
 
 
 def main():
@@ -159,7 +229,7 @@ def main():
         
         # 3. Parallel Processing (The Magic!)
         # We use 12 workers to process a whole year of months simultaneously
-        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             # Submit all 108 tasks to the thread pool
             future_to_period = {
                 executor.submit(process_month, year, month, lake, catalog): (year, month) 
@@ -183,6 +253,7 @@ def main():
             
         # Add to our set so we don't process it again if we restart
         processed_lake_ids.add(lake_id)
+        gc.collect()
     # 5. Final Compilation
     # Once the loop finishes entirely, we read the CSV to build the Parquet
     print("\n✅ All lakes processed. Building final Parquet file...")
@@ -197,9 +268,32 @@ def main():
     
     # Sort strictly for DuckDB efficiency
     final_df = final_df.sort_values(by=['hylak_id', 'date']).reset_index(drop=True)
+
+    # Apply Anomaly Filter (masking sudden drops below our threshold)
+    final_df.loc[final_df['water_percent'] < MIN_WATER_PERCENT_THRESHOLD, ['water_area_km2', 'water_percent']] = np.nan
+    # Convert 'date' from string to Datetime
+    final_df['date'] = pd.to_datetime(final_df['date'])
     
+    print("  -> Interpolating missing data points safely...")
+    # Define a helper function to interpolate one lake at a time in isolation
+    def interpolate_lake(lake_group):
+        # 1. Set the date index ONLY for this specific lake
+        lake_group = lake_group.set_index('date')
+        
+        # 2. Interpolate using time, and force it to fill leading/trailing NaNs
+        lake_group[['water_area_km2', 'water_percent']] = lake_group[['water_area_km2', 'water_percent']].interpolate(
+            method='time', 
+            limit_direction='both'
+        )
+        
+        # 3. Reset the index so 'date' is a column again, and return
+        return lake_group.reset_index()
+    # Apply the safe function to each lake, and drop the messy multi-index Pandas creates
+    final_df = final_df.groupby('hylak_id', group_keys=False).apply(interpolate_lake).reset_index(drop=True)
     output_path = r"data\water_trends_history.parquet"
     final_df.to_parquet(output_path)
+
     print(f"\n🎉 Successfully saved historical backfill to {output_path}")
+
 if __name__ == "__main__":
     main()

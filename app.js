@@ -53,10 +53,10 @@ map.addControl(new maplibregl.NavigationControl());
 
 // 2. Initialize the empty ApexChart
 const chartOptions = {
-    series: [{
-        name: 'Water Capacity %',
-        data: [] // We will fill this via DuckDB later!
-    }],
+    series: [
+        { name: 'Smoothed Area (km²)', data: [] },
+        { name: 'Raw Area (km²)', data: [] }
+    ],
     chart: {
         type: 'area',
         height: '100%',
@@ -66,7 +66,7 @@ const chartOptions = {
         animations: { enabled: true, easing: 'easeinout', speed: 800 }
     },
     theme: { mode: 'dark' },
-    colors: ['#38bdf8'], // Matching our vibrant cyan from CSS
+    colors: ['#06b6d4', '#64748b'], // Cyan for smoothed, gray for raw
     fill: {
         type: 'gradient',
         gradient: {
@@ -77,7 +77,7 @@ const chartOptions = {
         }
     },
     dataLabels: { enabled: false },
-    stroke: { curve: 'smooth', width: 2 },
+    stroke: { curve: 'smooth', width: [3, 1], dashArray: [0, 5] },
     xaxis: {
         type: 'datetime',
         labels: {
@@ -93,11 +93,9 @@ const chartOptions = {
     },
 
     yaxis: {
-        min: 0,
-        max: 100,
         labels: {
             style: { colors: '#94a3b8' },
-            formatter: (val) => val.toFixed(0) + '%'
+            formatter: (val) => val.toFixed(1) + ' km²'
         }
     },
     grid: {
@@ -121,7 +119,7 @@ async function loadDataAndRenderMap() {
     // This finds the most recent date and grabs the water_percent for all lakes.
     // 1. Construct the full absolute URL (http://localhost:8000/data/...)
     // Later, you will simply replace this with your Cloudflare R2 URL!
-    const fileUrl = new URL('data/water_trends_history.parquet', window.location.href).href;
+    const fileUrl = new URL('data/water_trends_history_web.parquet', window.location.href).href;
     // 2. Use the full URL in the SQL query
     // We use arg_max() to find the most recent water_percent that is NOT a cloudy 0%
     const query = `
@@ -236,12 +234,12 @@ function addMapLayer(geojsonData) {
 
         // 2. Fetch the 8-year history instantly using DuckDB HTTP Range Requests!
         console.log(`📈 Fetching historical data for Lake ID: ${lakeId}`);
-        const fileUrl = new URL('data/water_trends_history.parquet', window.location.href).href;
+        const fileUrl = new URL('data/water_trends_history_web.parquet', window.location.href).href;
 
         const historyQuery = `
-            SELECT date, water_percent 
+            SELECT date, water_area_km2, smoothed_area_km2 
             FROM '${fileUrl}' 
-            WHERE hylak_id = ${lakeId} AND water_percent > 0
+            WHERE hylak_id = ${lakeId} AND water_area_km2 > 0
             ORDER BY date
         `;
 
@@ -250,16 +248,21 @@ function addMapLayer(geojsonData) {
         const historyRows = result.toArray();
 
         // 3. Format the data for ApexCharts (it expects [timestamp, value] arrays)
-        const chartData = historyRows.map(row => [
+        const smoothedData = historyRows.map(row => [
             new Date(row.date).getTime(),
-            row.water_percent
+            row.smoothed_area_km2
+        ]);
+        
+        const rawData = historyRows.map(row => [
+            new Date(row.date).getTime(),
+            row.water_area_km2
         ]);
 
         // 4. Animate the chart!
-        chart.updateSeries([{
-            name: 'Capacity %',
-            data: chartData
-        }]);
+        chart.updateSeries([
+            { name: 'Smoothed Area (km²)', data: smoothedData },
+            { name: 'Raw Area (km²)', data: rawData }
+        ]);
     });
 
 
