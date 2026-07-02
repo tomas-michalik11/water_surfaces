@@ -54,8 +54,8 @@ map.addControl(new maplibregl.NavigationControl());
 // 2. Initialize the empty ApexChart
 const chartOptions = {
     series: [
-        { name: 'Smoothed Area (km²)', data: [] },
-        { name: 'Raw Area (km²)', data: [] }
+        { name: 'Smoothed Area', data: [] },
+        { name: 'Raw Area', data: [] }
     ],
     chart: {
         type: 'area',
@@ -78,6 +78,26 @@ const chartOptions = {
     },
     dataLabels: { enabled: false },
     stroke: { curve: 'smooth', width: [3, 1], dashArray: [0, 5] },
+    legend: {
+        show: true,
+        position: 'top',
+        horizontalAlign: 'right',
+        offsetY: -10,
+        labels: {
+            colors: '#94a3b8'
+        }
+    },
+    tooltip: {
+        theme: 'dark',
+        shared: true,
+        intersect: false,
+        y: {
+            formatter: function (val) {
+                if (val === undefined || val === null) return "N/A";
+                return val.toFixed(1) + ' km²';
+            }
+        }
+    },
     xaxis: {
         type: 'datetime',
         labels: {
@@ -88,8 +108,8 @@ const chartOptions = {
             }
         },
         axisBorder: { show: false },
-        axisTicks: { show: false }
-        // We removed tickAmount so ApexCharts can auto-calculate it dynamically!
+        axisTicks: { show: false },
+        tooltip: { enabled: false } // disable xaxis tooltip as we have shared tooltip
     },
 
     yaxis: {
@@ -260,8 +280,8 @@ function addMapLayer(geojsonData) {
 
         // 4. Animate the chart!
         chart.updateSeries([
-            { name: 'Smoothed Area (km²)', data: smoothedData },
-            { name: 'Raw Area (km²)', data: rawData }
+            { name: 'Smoothed Area', data: smoothedData },
+            { name: 'Raw Area', data: rawData }
         ]);
     });
 
