@@ -4,8 +4,9 @@ import geopandas as gpd
 from pystac_client import Client
 import planetary_computer
 import concurrent.futures
+import numpy as np
 
-from backfill import process_month
+from backfill import process_month, MIN_WATER_PERCENT_THRESHOLD
 
 def get_next_processing_month():
     print("🌍 Reading historical data locally...")
@@ -87,10 +88,29 @@ def main():
     # Critical: Keep the primary and secondary sort keys intact
     df_combined = df_combined.sort_values(by=['hylak_id', 'date']).reset_index(drop=True)
     
+    print("🩹 Applying Anomaly Filter and Interpolation (matching backfill logic)...")
+    df_combined.loc[df_combined['water_percent'] < MIN_WATER_PERCENT_THRESHOLD, ['water_area_km2', 'water_percent']] = np.nan
+    df_combined['date'] = pd.to_datetime(df_combined['date'])
+    
+    df_combined = df_combined.set_index('date')
+    df_combined['water_area_km2'] = df_combined.groupby('hylak_id')['water_area_km2'].transform(
+        lambda x: x.interpolate(method='time', limit_direction='both')
+    )
+    df_combined['water_percent'] = df_combined.groupby('hylak_id')['water_percent'].transform(
+        lambda x: x.interpolate(method='time', limit_direction='both')
+    )
+    df_combined = df_combined.reset_index()
+    
     print("☁️ Saving updated dataset locally...")
     file_path = "data/water_trends_history.parquet"
     df_combined.to_parquet(file_path)
     print(f"🎉 Incremental update complete! Saved to {file_path}")
+
+    print("\n🌐 Automatically preparing updated data for the web...")
+    from prepare_web_data import clean_and_prepare_for_web
+    web_file_path = "data/water_trends_history_web.parquet"
+    clean_and_prepare_for_web(file_path, web_file_path, window_size=3)
+    print("🚀 Pipeline fully complete! Web data is refreshed.")
 
 if __name__ == "__main__":
     main()

@@ -36,4 +36,4 @@ jobs:
         uses: stefanzweifel/git-auto-commit-action@v5
         with:
           commit_message: "🤖 Auto-update water surface data"
-          file_pattern: data/water_trends_history.parquet
+          file_pattern: data/water_trends_history*.parquet
