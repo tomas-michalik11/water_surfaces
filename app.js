@@ -138,8 +138,8 @@ async function loadDataAndRenderMap() {
     // We only need standard DuckDB now! No spatial extension needed.
     // This finds the most recent date and grabs the water_percent for all lakes.
     // 1. Construct the full absolute URL (http://localhost:8000/data/...)
-    // Later, you will simply replace this with your Cloudflare R2 URL!
-    const fileUrl = new URL('data/water_trends_history_web.parquet', window.location.href).href;
+    // We add a cache-buster (?v=Date.now()) so the browser always loads the freshest data!
+    const fileUrl = new URL(`data/water_trends_history_web.parquet?v=${Date.now()}`, window.location.href).href;
     // 2. Use the full URL in the SQL query
     // We use arg_max() to find the most recent water_percent that is NOT a cloudy 0%
     const query = `
@@ -300,7 +300,7 @@ function addMapLayer(geojsonData) {
 
         // 2. Fetch the 8-year history instantly using DuckDB HTTP Range Requests!
         console.log(`📈 Fetching historical data for Lake ID: ${lakeId}`);
-        const fileUrl = new URL('data/water_trends_history_web.parquet', window.location.href).href;
+        const fileUrl = new URL(`data/water_trends_history_web.parquet?v=${Date.now()}`, window.location.href).href;
 
         const historyQuery = `
             SELECT date, water_area_km2, smoothed_area_km2 
