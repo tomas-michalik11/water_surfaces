@@ -19,8 +19,13 @@ def get_next_processing_month():
         print(f"❌ Failed to load local history: {e}")
         return None, None
         
-    # Find the most recent date in your dataset
-    max_date = pd.to_datetime(df_history['date']).max()
+    # Clean future dates that might have been added by the historical backfill
+    today = pd.to_datetime('today')
+    df_history['date'] = pd.to_datetime(df_history['date'])
+    df_history = df_history[df_history['date'] <= today].copy()
+
+    # Find the most recent valid date in your dataset
+    max_date = df_history['date'].max()
     print(f"📊 Latest data is from: {max_date.date()}")
     
     # Calculate the target month using pandas offsets
