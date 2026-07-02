@@ -144,8 +144,14 @@ def process_scene(item, lake_row):
     # Total = Every pixel of water we saw + our best guess for the missing core pixels
     estimated_water_pixels = visible_water_pixels_in_buffer + (missing_core_pixels * core_water_ratio)
     
-    pixel_size_m2 = 10 * 10
-    area_km2 = (estimated_water_pixels * pixel_size_m2) / 1_000_000
+    import math
+    lat_radians = math.radians(lake_row.geometry.centroid.y)
+    distortion_factor = math.cos(lat_radians)**2
+    
+    # A 10x10 pixel is 100m2 in Web Mercator, but we shrink it to its true ground size
+    true_pixel_size_m2 = 100 * distortion_factor
+    
+    area_km2 = (estimated_water_pixels * true_pixel_size_m2) / 1_000_000
     
     ds.close()
     ds_clipped.close()
