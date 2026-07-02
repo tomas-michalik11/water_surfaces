@@ -304,7 +304,7 @@ function addMapLayer(geojsonData) {
         const gdwUse = feature.properties.MAIN_USE;
 
         document.getElementById('meta-year').innerText = (gdwYear && gdwYear > 0) ? `Built: ${gdwYear}` : 'Built: Unknown';
-        document.getElementById('meta-cap').innerText = (gdwCap && gdwCap > 0) ? `Capacity: ${Math.round(gdwCap).toLocaleString()} MCM` : 'Capacity: Unknown';
+        document.getElementById('meta-cap').innerText = (gdwCap && gdwCap > 0) ? `Capacity: ${Math.round(gdwCap).toLocaleString()} million m³` : 'Capacity: Unknown';
         document.getElementById('meta-use').innerText = (gdwUse && gdwUse !== 'Unknown') ? `Use: ${gdwUse}` : 'Use: Unknown';
 
         // 2. Fetch the 8-year history instantly using DuckDB HTTP Range Requests!
