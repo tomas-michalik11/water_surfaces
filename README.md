@@ -82,8 +82,6 @@ water_surface/
 ├── 🐳 Dockerfile                 # Container definition for pipeline execution
 │
 ├── 📓 notebook.ipynb             # Research, prototyping, and data exploration
-├── 📝 todo.md                    # Project roadmap and tasks
-├── 📝 todo_backfillV2.md         # Refactoring plans for the pipeline
 │
 └── 📁 data/                      # Local data storage
     ├── eu_water_surfaces.geojson # Reservoir geometries for the frontend
@@ -103,8 +101,8 @@ water_surface/
 ### 1. Clone and Setup
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/aquastress.git
-cd aquastress
+git clone https://github.com/tomas-michalik11/water_surfaces.git
+cd water_surfaces
 
 # Create a virtual environment
 python -m venv venv
@@ -117,11 +115,8 @@ pip install -r requirements.txt
 ### 2. Running the Data Pipeline
 If you wish to update the data or run the backfill (requires internet access to Microsoft Planetary Computer):
 ```bash
-# Run the incremental update for the latest month
+# Run the incremental update for the latest month (automatically prepares web data too)
 python update.py
-
-# Clean and prepare the Parquet file for the web
-python prepare_web_data.py
 ```
 
 ### 3. Running the Web Application
