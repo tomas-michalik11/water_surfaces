@@ -228,7 +228,7 @@ function addMapLayer(geojsonData) {
     });
 
     // --- HIGHLIGHT LAYERS ---
-    
+
     // 1. Highlight Fill (Yellowish with low opacity)
     map.addLayer({
         id: 'lakes-highlight-fill',
@@ -298,6 +298,15 @@ function addMapLayer(geojsonData) {
         document.getElementById('lake-name').innerText = lakeName || "Unnamed Reservoir";
         document.getElementById('current-capacity').innerText = currentCap.toFixed(1) + '%';
 
+        // 1.5 Update the GDW Metadata Bar
+        const gdwYear = feature.properties.GDW_YEAR;
+        const gdwCap = feature.properties.GDW_CAP_MCM;
+        const gdwUse = feature.properties.MAIN_USE;
+
+        document.getElementById('meta-year').innerText = (gdwYear && gdwYear > 0) ? `Built: ${gdwYear}` : 'Built: Unknown';
+        document.getElementById('meta-cap').innerText = (gdwCap && gdwCap > 0) ? `Capacity: ${Math.round(gdwCap).toLocaleString()} MCM` : 'Capacity: Unknown';
+        document.getElementById('meta-use').innerText = (gdwUse && gdwUse !== 'Unknown') ? `Use: ${gdwUse}` : 'Use: Unknown';
+
         // 2. Fetch the 8-year history instantly using DuckDB HTTP Range Requests!
         console.log(`📈 Fetching historical data for Lake ID: ${lakeId}`);
         const fileUrl = new URL(`data/water_trends_history_web.parquet?v=${Date.now()}`, window.location.href).href;
@@ -318,7 +327,7 @@ function addMapLayer(geojsonData) {
             new Date(row.date).getTime(),
             row.smoothed_area_km2
         ]);
-        
+
         const rawData = historyRows.map(row => [
             new Date(row.date).getTime(),
             row.water_area_km2
