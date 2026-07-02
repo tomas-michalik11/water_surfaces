@@ -31,6 +31,13 @@ def get_next_processing_month():
     # Calculate the target month using pandas offsets
     target_month = max_date + pd.offsets.MonthBegin(1)
     
+    # Ensure we ONLY process months that have completely finished
+    current_month_start = today.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
+    if target_month >= current_month_start:
+        print(f"⚠️ Target month ({target_month.strftime('%Y-%m')}) is the current ongoing month.")
+        print("Waiting until the month is fully over before processing to ensure complete satellite coverage.")
+        return None, None
+        
     print(f"🎯 Target month for new data: {target_month.strftime('%Y-%m')}")
     
     return df_history, target_month
