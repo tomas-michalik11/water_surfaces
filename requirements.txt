@@ -1,5 +1,6 @@
 geopandas
 pandas
+pyarrow
 numpy
 pystac-client
 planetary-computer
