@@ -294,21 +294,23 @@ def main():
     final_df['date'] = pd.to_datetime(final_df['date'])
     
     print("  -> Interpolating missing data points safely...")
-    # Define a helper function to interpolate one lake at a time in isolation
-    def interpolate_lake(lake_group):
-        # 1. Set the date index ONLY for this specific lake
-        lake_group = lake_group.set_index('date')
-        
-        # 2. Interpolate using time, and force it to fill leading/trailing NaNs
-        lake_group[['water_area_km2', 'water_percent']] = lake_group[['water_area_km2', 'water_percent']].interpolate(
-            method='time', 
-            limit_direction='both'
-        )
-        
-        # 3. Reset the index so 'date' is a column again, and return
-        return lake_group.reset_index()
-    # Apply the safe function to each lake, and drop the messy multi-index Pandas creates
-    final_df = final_df.groupby('hylak_id', group_keys=False).apply(interpolate_lake).reset_index(drop=True)
+    
+    # 1. Set the date index globally so 'time' interpolation works
+    final_df = final_df.set_index('date')
+    
+    # 2. Use transform to apply interpolation within each lake group independently
+    # This guarantees no columns are dropped!
+    final_df['water_area_km2'] = final_df.groupby('hylak_id')['water_area_km2'].transform(
+        lambda x: x.interpolate(method='time', limit_direction='both')
+    )
+    
+    final_df['water_percent'] = final_df.groupby('hylak_id')['water_percent'].transform(
+        lambda x: x.interpolate(method='time', limit_direction='both')
+    )
+    
+    # 3. Bring 'date' back as a normal column
+    final_df = final_df.reset_index()
+
     output_path = r"data\water_trends_history.parquet"
     final_df.to_parquet(output_path)
 
