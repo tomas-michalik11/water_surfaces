@@ -279,10 +279,14 @@ function addMapLayer(geojsonData) {
         ]);
 
         // 4. Animate the chart!
-        chart.updateSeries([
-            { name: 'Smoothed Area', data: smoothedData },
-            { name: 'Raw Area', data: rawData }
-        ]);
+        // We use updateOptions instead of updateSeries to force ApexCharts 
+        // to fully recalculate the layout (legends, tooltips) from the empty state
+        chart.updateOptions({
+            series: [
+                { name: 'Smoothed Area', data: smoothedData },
+                { name: 'Raw Area', data: rawData }
+            ]
+        });
     });
 
 
