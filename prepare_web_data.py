@@ -12,8 +12,8 @@ def clean_and_prepare_for_web(input_parquet, output_parquet, window_size=3):
     df_clean = df_clean.dropna(subset=['water_area_km2'])
     
     # 3. Determine the grouping column
-    # We strongly prefer a unique ID. If it's missing, we fallback to name, 
-    # but be aware this will corrupt data for lakes with missing names!
+    # unique ID. If it's missing, we fallback to name, 
+    # be aware this will corrupt data for lakes with missing names!
     if 'hylak_id' in df_clean.columns:
         group_col = 'hylak_id'
     elif 'id' in df_clean.columns:
@@ -33,7 +33,7 @@ def clean_and_prepare_for_web(input_parquet, output_parquet, window_size=3):
     DROP_THRESHOLD = 30.0 
     
     # 1. Get the previous and next month's values. 
-    # CRITICAL: We must use groupby(group_col) so we don't compare Lake A with Lake B!
+    # CRITICAL: use groupby(group_col) so don't compare Lake A with Lake B!
     prev_val = df_clean.groupby(group_col)['water_percent'].shift(1)
     next_val = df_clean.groupby(group_col)['water_percent'].shift(-1)
     curr_val = df_clean['water_percent']
