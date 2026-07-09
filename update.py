@@ -64,7 +64,7 @@ def main():
     print(f"🌊 Processing {len(lakes_gdf)} lakes for {target_month.strftime('%B %Y')}...")
     
     new_records = []
-    # We use ThreadPoolExecutor just like you did in backfill.py
+    # ThreadPoolExecutor
     with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         # We only submit ONE month per lake this time
         future_to_lake = {
