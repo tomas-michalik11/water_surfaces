@@ -44,7 +44,7 @@ def get_best_scene(catalog, bbox, start_date, end_date):
             # Find the date with the lowest AVERAGE cloud cover across all its tiles
             best_date = min(items_by_date.keys(), key=lambda d: sum(i.properties["eo:cloud_cover"] for i in items_by_date[d]) / len(items_by_date[d]))
             
-            # Return ALL items from that best day (a list!)
+            # Return ALL items from that best day (a list)
             return items_by_date[best_date]
             
         except Exception as e:
@@ -246,8 +246,8 @@ def main():
         
         lake_results = []
         
-        # 3. Parallel Processing (The Magic!)
-        # We use 12 workers to process a whole year of months simultaneously
+        # 3. Parallel Processing 
+        # We use 2 workers to process a whole year of months simultaneously
         with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
             # Submit all 108 tasks to the thread pool
             future_to_period = {
