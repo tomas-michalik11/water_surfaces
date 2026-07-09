@@ -60,7 +60,6 @@ The web client operates entirely in the browser without a traditional backend AP
 - **Intelligent Cloud Masking**: Dual-zone evaluation maximizing usable imagery even in partially cloudy conditions.
 - **Serverless Architecture**: Zero backend infrastructure required. DuckDB-Wasm handles complex SQL aggregations directly in the browser.
 - **Performant Visualizations**: 60fps WebGL map rendering via MapLibre GL and dynamic, animated charting via ApexCharts.
-- **Premium UI/UX**: Dark mode aesthetic with glowing highlights, responsive design, and instant interactivity.
 
 ---
 
