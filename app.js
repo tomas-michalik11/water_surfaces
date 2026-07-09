@@ -30,7 +30,7 @@ async function setupDatabase() {
     conn = await db.connect();
     console.log("✅ DuckDB successfully running in the browser!");
 
-    // Trigger the data loading!
+    // Trigger the data loading
     await loadDataAndRenderMap();
 }
 
@@ -42,7 +42,7 @@ setupDatabase();
 // 1. Initialize MapLibre with a Free Dark Basemap
 const map = new maplibregl.Map({
     container: 'map', // Targets the <div id="map">
-    // CARTO Dark Matter - Free, no API key required, beautiful dark theme
+    // CARTO Dark Matter - Free, no API key required, dark theme
     style: 'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',
     center: [14.0, 49.0], // Centered over Europe
     zoom: 4,
@@ -334,7 +334,7 @@ function addMapLayer(geojsonData) {
         ]);
 
         // 4. Animate the chart!
-        // We use updateOptions instead of updateSeries to force ApexCharts 
+        // updateOptions instead of updateSeries to force ApexCharts 
         // to fully recalculate the layout (legends, tooltips) from the empty state
         chart.updateOptions({
             series: [
